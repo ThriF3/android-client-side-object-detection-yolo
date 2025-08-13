@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.arm64opencvcamera"
+    namespace = "com.example.carobstacledetection"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.arm64opencvcamera"
+        applicationId = "com.example.carobstacledetection"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

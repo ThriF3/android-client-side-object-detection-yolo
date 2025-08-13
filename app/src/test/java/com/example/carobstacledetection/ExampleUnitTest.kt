@@ -1,4 +1,4 @@
-package com.example.arm64opencvcamera
+package com.example.carobstacledetection
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.example.arm64opencvcamera
+package com.example.carobstacledetection
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.carobstacledetection.R
 import org.opencv.android.CameraBridgeViewBase
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
@@ -288,11 +289,13 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 
                         val finalConfidence = confidence * maxClassScore
                         if (finalConfidence > confidenceThreshold) {
-                            detections.add(Detection(
+                            detections.add(
+                                Detection(
                                 Rect2d(left.toDouble(), top.toDouble(), width.toDouble(), height.toDouble()),
                                 finalConfidence,
                                 classId
-                            ))
+                            )
+                            )
                         }
                     }
                 }

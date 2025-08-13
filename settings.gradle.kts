@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Arm64.OpenCV.Camera"
+rootProject.name = "Car Obstacle Detection Mobile"
 include(":app")
  

@@ -1,117 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fillViewport="true">
 
-    <!-- Top Border -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="20dp"
-        android:layout_marginBottom="8dp"
-        android:background="#002196F3" />
-
-    <!-- Control Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginBottom="16dp">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <!-- Start Camera Button -->
-        <Button
-            android:id="@+id/buttonStartPreview"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Start Camera"
-            android:layout_marginEnd="8dp" />
+        <!-- Top Border -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:layout_marginBottom="8dp"
+            android:background="#002196F3" />
 
-        <!-- Stop Camera Button -->
-        <Button
-            android:id="@+id/buttonStopPreview"
-            android:layout_width="0dp"
+        <!-- Control Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Stop Camera"
-            android:layout_marginStart="8dp"/>
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
+
+            <!-- Start Camera Button -->
+            <Button
+                android:id="@+id/buttonStartPreview"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Start Camera"
+                android:layout_marginEnd="8dp" />
+
+            <!-- Stop Camera Button -->
+            <Button
+                android:id="@+id/buttonStopPreview"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Stop Camera"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <!-- Checkbox to enable grayscale -->
+        <CheckBox
+            android:id="@+id/checkboxEnableProcessing"
+            android:layout_width="wrap_content"
+            android:layout_height="23dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:text="Enable Grayscale" />
+
+        <!-- OpenCV Camera View (for debugging) -->
+        <org.opencv.android.JavaCameraView
+            android:id="@+id/cameraView"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:visibility="visible" />
+
+        <!-- Top Window - Original Video -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Original Video (320x320)"
+            android:layout_gravity="center_horizontal"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="320dp"
+            android:layout_height="320dp"
+            android:layout_gravity="center_horizontal"
+            android:background="#f0f0f0"
+            android:contentDescription="Original Camera Feed"
+            android:scaleType="fitXY"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Bottom Window - Grayscale/Same Video -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Processed Video (320x320)"
+            android:layout_gravity="center_horizontal"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <ImageView
+            android:id="@+id/imageViewProcessed"
+            android:layout_width="320dp"
+            android:layout_height="320dp"
+            android:layout_gravity="center_horizontal"
+            android:background="#f0f0f0"
+            android:contentDescription="Processed Camera Feed"
+            android:scaleType="fitXY"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Status Text -->
+        <TextView
+            android:id="@+id/textViewStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="OpenCV Camera Ready"
+            android:textAlignment="center"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Bottom Border -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:layout_marginTop="8dp"
+            android:background="#002196F3" />
+
     </LinearLayout>
 
-    <!-- Checkbox to enable grayscale -->
-
-    <!-- Hidden OpenCV Camera View -->
-    <CheckBox
-        android:id="@+id/checkboxEnableProcessing"
-        android:layout_width="wrap_content"
-        android:layout_height="25dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:text="Enable Grayscale" />
-
-    <org.opencv.android.JavaCameraView
-        android:id="@+id/cameraView"
-        android:layout_width="1px"
-        android:layout_height="1px"
-        android:visibility="gone" />
-
-    <!-- Top Window - Original Video -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Original Video (320x320)"
-        android:layout_gravity="center_horizontal"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="320dp"
-        android:layout_height="320dp"
-        android:layout_gravity="center_horizontal"
-        android:background="#f0f0f0"
-        android:contentDescription="Original Camera Feed"
-        android:scaleType="fitXY"
-        android:layout_marginBottom="16dp" />
-
-    <!-- Bottom Window - Grayscale/Same Video -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Processed Video (320x320)"
-        android:layout_gravity="center_horizontal"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <ImageView
-        android:id="@+id/imageViewProcessed"
-        android:layout_width="320dp"
-        android:layout_height="320dp"
-        android:layout_gravity="center_horizontal"
-        android:background="#f0f0f0"
-        android:contentDescription="Processed Camera Feed"
-        android:scaleType="fitXY"
-        android:layout_marginBottom="16dp" />
-
-    <!-- Status Text -->
-    <TextView
-        android:id="@+id/textViewStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:text="OpenCV Camera Ready"
-        android:textAlignment="center"
-        android:textSize="18sp"
-        android:textStyle="bold" />
-
-    <!-- Bottom Border -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="19dp"
-        android:layout_marginTop="8dp"
-        android:background="#002196F3" />
-
-</LinearLayout>
+</ScrollView>

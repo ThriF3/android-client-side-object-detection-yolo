@@ -13,15 +13,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.carobstacledetection.R
 import org.opencv.android.CameraBridgeViewBase
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
 import org.opencv.core.*
-import org.opencv.dnn.Dnn
-import org.opencv.dnn.Net
 import org.opencv.imgproc.Imgproc
-import java.io.IOException
 
 class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListener2 {
     private lateinit var textViewStatus: TextView
@@ -35,20 +31,13 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     private var isPreviewActive = false
 
     private val cameraPermissionRequestCode = 100
-    private val inputSize = 384 // Target size untuk YOLO input
+    private val targetSize = 224 // Target size 224x224
 
     private lateinit var inputMat: Mat
-    private lateinit var processedMat: Mat
     private lateinit var resizedMat: Mat
-    private lateinit var yoloNet: Net
-    private var isYoloLoaded = false
-
-    // YOLO parameters
-    private val confidenceThreshold = 0.5f
-    private val nmsThreshold = 0.4f
 
     companion object {
-        private const val TAG = "YOLOCamera"
+        private const val TAG = "Camera224"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,10 +52,8 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         imageView = findViewById(R.id.imageView)
         openCvCameraView = findViewById(R.id.cameraView)
 
+        // Initialize OpenCV
         isOpenCvInitialized = OpenCVLoader.initLocal()
-
-        // Load YOLO model
-        loadYoloModel()
 
         // Request camera permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -82,43 +69,45 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         openCvCameraView.setCvCameraViewListener(this)
 
         buttonStartPreview.setOnClickListener {
-            openCvCameraView.setCameraPermissionGranted()
-            openCvCameraView.enableView()
+            Log.d(TAG, "Start button clicked")
+
+            // Check camera permission first
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+                Log.w(TAG, "Camera permission not granted, requesting...")
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.CAMERA),
+                    cameraPermissionRequestCode
+                )
+                return@setOnClickListener
+            }
+
+            try {
+                Log.d(TAG, "Attempting to start camera...")
+                openCvCameraView.setCameraPermissionGranted()
+                openCvCameraView.enableView()
+                Log.d(TAG, "Camera enableView() called")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting camera: ${e.message}")
+                textViewStatus.text = "Error: ${e.message}"
+            }
+
             updateControls()
         }
 
         buttonStopPreview.setOnClickListener {
-            openCvCameraView.disableView()
+            Log.d(TAG, "Stop button clicked")
+            try {
+                openCvCameraView.disableView()
+                Log.d(TAG, "Camera disableView() called")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping camera: ${e.message}")
+            }
             updateControls()
         }
 
         updateControls()
-    }
-
-    private fun loadYoloModel() {
-        try {
-            // Pastikan file yolo.onnx ada di folder assets
-            val modelInputStream = assets.open("yolo.onnx")
-            val modelDir = filesDir
-            val modelFile = java.io.File(modelDir, "yolo.onnx")
-
-            modelFile.outputStream().use { output ->
-                modelInputStream.copyTo(output)
-            }
-
-            yoloNet = Dnn.readNetFromONNX(modelFile.absolutePath)
-            isYoloLoaded = !yoloNet.empty()
-
-            if (isYoloLoaded) {
-                Log.d(TAG, "YOLO model loaded successfully")
-            } else {
-                Log.e(TAG, "Failed to load YOLO model")
-            }
-
-        } catch (e: IOException) {
-            Log.e(TAG, "Error loading YOLO model: ${e.message}")
-            isYoloLoaded = false
-        }
     }
 
     private fun updateControls() {
@@ -127,38 +116,46 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
                 textViewStatus.text = "OpenCV initialization error"
                 buttonStartPreview.isEnabled = false
                 buttonStopPreview.isEnabled = false
+                Log.e(TAG, "OpenCV not initialized")
             }
-            !isYoloLoaded -> {
-                textViewStatus.text = "YOLO model not loaded"
-                buttonStartPreview.isEnabled = false
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    != PackageManager.PERMISSION_GRANTED -> {
+                textViewStatus.text = "Camera permission required"
+                buttonStartPreview.isEnabled = true
                 buttonStopPreview.isEnabled = false
+                Log.w(TAG, "Camera permission not granted")
             }
             else -> {
-                textViewStatus.text = "OpenCV & YOLO ready"
+                textViewStatus.text = if (isPreviewActive) "Camera Active" else "Camera Ready"
                 buttonStartPreview.isEnabled = !isPreviewActive
                 buttonStopPreview.isEnabled = isPreviewActive
+                Log.d(TAG, "Controls updated - Preview active: $isPreviewActive")
             }
         }
     }
 
     override fun onCameraViewStarted(width: Int, height: Int) {
+        Log.d(TAG, "onCameraViewStarted called: ${width}x${height}")
         isPreviewActive = true
 
         inputMat = Mat(height, width, CvType.CV_8UC4)
-        processedMat = Mat(height, width, CvType.CV_8UC3)
-        resizedMat = Mat(inputSize, inputSize, CvType.CV_8UC3)
+        resizedMat = Mat(targetSize, targetSize, CvType.CV_8UC3)
 
-        updateControls()
+        runOnUiThread {
+            updateControls()
+        }
     }
 
     override fun onCameraViewStopped() {
+        Log.d(TAG, "onCameraViewStopped called")
         isPreviewActive = false
 
         if (::inputMat.isInitialized) inputMat.release()
-        if (::processedMat.isInitialized) processedMat.release()
         if (::resizedMat.isInitialized) resizedMat.release()
 
-        updateControls()
+        runOnUiThread {
+            updateControls()
+        }
     }
 
     override fun onCameraFrame(inputFrame: CameraBridgeViewBase.CvCameraViewFrame?): Mat {
@@ -166,203 +163,75 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 
         var matToDisplay = inputMat
 
-        if (checkBoxProcessing.isChecked && isYoloLoaded) {
-            // Convert RGBA to RGB for YOLO
-            Imgproc.cvtColor(inputMat, processedMat, Imgproc.COLOR_RGBA2RGB)
+        if (checkBoxProcessing.isChecked) {
+            // Convert RGBA to RGB
+            val rgbMat = Mat()
+            Imgproc.cvtColor(inputMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
 
-            // Resize/crop to 384x384
-            val resizedFrame = preprocessForYolo(processedMat)
+            // Resize to 224x224
+            Imgproc.resize(rgbMat, resizedMat, Size(targetSize.toDouble(), targetSize.toDouble()))
 
-            // Run YOLO inference
-            val detections = runYoloInference(resizedFrame)
+            // Convert back to RGBA for display
+            val displayMat = Mat()
+            Imgproc.cvtColor(resizedMat, displayMat, Imgproc.COLOR_RGB2RGBA)
 
-            // Draw detections on original frame
-            val resultFrame = drawDetections(processedMat, detections)
+            matToDisplay = displayMat
 
-            matToDisplay = resultFrame
+            // Clean up temporary matrices
+            rgbMat.release()
         }
 
-        // Prepare bitmap for display
+        // Create bitmap for display
         val bitmapToDisplay = Bitmap.createBitmap(
             matToDisplay.cols(),
             matToDisplay.rows(),
             Bitmap.Config.ARGB_8888
         )
 
-        // Convert Mat to Bitmap based on format
-        if (matToDisplay.channels() == 3) {
-            // RGB format, need to convert to RGBA for bitmap
-            val rgbaMat = Mat()
-            Imgproc.cvtColor(matToDisplay, rgbaMat, Imgproc.COLOR_RGB2RGBA)
-            Utils.matToBitmap(rgbaMat, bitmapToDisplay)
-            rgbaMat.release()
-        } else {
-            Utils.matToBitmap(matToDisplay, bitmapToDisplay)
-        }
+        Utils.matToBitmap(matToDisplay, bitmapToDisplay)
 
         // Display on UI thread
         runOnUiThread {
             imageView.setImageBitmap(bitmapToDisplay)
+            if (checkBoxProcessing.isChecked) {
+                textViewStatus.text = "Processing: 224x224"
+            } else {
+                textViewStatus.text = "Original: ${matToDisplay.cols()}x${matToDisplay.rows()}"
+            }
+        }
+
+        // Clean up display matrix if it was created for processing
+        if (checkBoxProcessing.isChecked && matToDisplay != inputMat) {
+            matToDisplay.release()
         }
 
         return inputMat
     }
 
-    private fun preprocessForYolo(inputMat: Mat): Mat {
-        // Option 1: Resize with interpolation (may distort aspect ratio)
-        Imgproc.resize(inputMat, resizedMat, Size(inputSize.toDouble(), inputSize.toDouble()))
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        // Option 2: Center crop (preserves aspect ratio)
-        // Uncomment below and comment above resize if you prefer center crop
-        /*
-        val centerCrop = centerCropToSquare(inputMat)
-        Imgproc.resize(centerCrop, resizedMat, Size(inputSize.toDouble(), inputSize.toDouble()))
-        centerCrop.release()
-        */
-
-        return resizedMat
-    }
-
-    private fun centerCropToSquare(inputMat: Mat): Mat {
-        val height = inputMat.rows()
-        val width = inputMat.cols()
-        val size = minOf(height, width)
-
-        val startX = (width - size) / 2
-        val startY = (height - size) / 2
-
-        val roi = Rect(startX, startY, size, size)
-        return Mat(inputMat, roi)
-    }
-
-    private fun runYoloInference(inputMat: Mat): List<Detection> {
-        val detections = mutableListOf<Detection>()
-
-        try {
-            // Create blob from image
-            val blob = Dnn.blobFromImage(
-                inputMat,
-                1.0 / 255.0,  // Scale factor
-                Size(inputSize.toDouble(), inputSize.toDouble()),
-                Scalar(0.0),  // Mean subtraction
-                true,         // Swap RB
-                false,        // Crop
-                CvType.CV_32F
-            )
-
-            // Set input to network
-            yoloNet.setInput(blob)
-
-            // Run forward pass
-            val outputs = mutableListOf<Mat>()
-            yoloNet.forward(outputs, yoloNet.unconnectedOutLayersNames)
-
-            // Process outputs
-            for (output in outputs) {
-                val rows = output.size(1).toInt()
-                val cols = output.size(2).toInt()
-
-                for (i in 0 until rows) {
-                    val data = FloatArray(cols)
-                    output.get(intArrayOf(0, i), data)
-
-                    // Extract detection data
-                    val confidence = data[4]
-                    if (confidence > confidenceThreshold) {
-                        val centerX = data[0] * inputSize
-                        val centerY = data[1] * inputSize
-                        val width = data[2] * inputSize
-                        val height = data[3] * inputSize
-
-                        val left = centerX - width / 2
-                        val top = centerY - height / 2
-
-                        // Find class with highest score
-                        var maxClassScore = 0f
-                        var classId = 0
-                        for (j in 5 until cols) {
-                            if (data[j] > maxClassScore) {
-                                maxClassScore = data[j]
-                                classId = j - 5
-                            }
-                        }
-
-                        val finalConfidence = confidence * maxClassScore
-                        if (finalConfidence > confidenceThreshold) {
-                            detections.add(
-                                Detection(
-                                Rect2d(left.toDouble(), top.toDouble(), width.toDouble(), height.toDouble()),
-                                finalConfidence,
-                                classId
-                            )
-                            )
-                        }
-                    }
-                }
+        if (requestCode == cameraPermissionRequestCode) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Camera permission granted")
+                updateControls()
+            } else {
+                Log.e(TAG, "Camera permission denied")
+                textViewStatus.text = "Camera permission required"
             }
-
-            // Clean up
-            outputs.forEach { it.release() }
-            blob.release()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "YOLO inference error: ${e.message}")
         }
-
-        return detections
     }
-
-    private fun drawDetections(inputMat: Mat, detections: List<Detection>): Mat {
-        val resultMat = inputMat.clone()
-
-        for (detection in detections) {
-            val rect = detection.box
-            val scaleX = inputMat.cols().toDouble() / inputSize
-            val scaleY = inputMat.rows().toDouble() / inputSize
-
-            // Scale coordinates back to original image size
-            val scaledRect = Rect(
-                (rect.x * scaleX).toInt(),
-                (rect.y * scaleY).toInt(),
-                (rect.width * scaleX).toInt(),
-                (rect.height * scaleY).toInt()
-            )
-
-            // Draw bounding box
-            Imgproc.rectangle(
-                resultMat,
-                Point(scaledRect.x.toDouble(), scaledRect.y.toDouble()),
-                Point((scaledRect.x + scaledRect.width).toDouble(),
-                    (scaledRect.y + scaledRect.height).toDouble()),
-                Scalar(0.0, 255.0, 0.0), // Green color
-                3
-            )
-
-            // Draw class label and confidence
-            val label = "Class ${detection.classId}: ${String.format("%.2f", detection.confidence)}"
-            Imgproc.putText(
-                resultMat,
-                label,
-                Point(scaledRect.x.toDouble(), scaledRect.y - 10.0),
-                Imgproc.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                Scalar(0.0, 255.0, 0.0),
-                2
-            )
-        }
-
-        return resultMat
-    }
-
-    data class Detection(
-        val box: Rect2d,
-        val confidence: Float,
-        val classId: Int
-    )
 
     override fun onDestroy() {
         super.onDestroy()
-        // Tidak perlu release yoloNet karena class Net tidak punya method release()
-        // dan akan dibersihkan otomatis oleh garbage collector
+
+        if (::inputMat.isInitialized) inputMat.release()
+        if (::resizedMat.isInitialized) resizedMat.release()
+
+        Log.d(TAG, "Activity destroyed")
     }
 }

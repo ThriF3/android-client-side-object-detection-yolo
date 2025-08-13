@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.opencv.android.CameraBridgeViewBase
+import org.opencv.android.JavaCameraView
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
 import org.opencv.core.*
@@ -25,19 +26,20 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     private lateinit var buttonStopPreview: Button
     private lateinit var checkBoxProcessing: CheckBox
     private lateinit var imageView: ImageView
-    private lateinit var openCvCameraView: CameraBridgeViewBase
+    private lateinit var imageViewProcessed: ImageView
+    private lateinit var openCvCameraView: JavaCameraView
 
     private var isOpenCvInitialized = false
     private var isPreviewActive = false
 
     private val cameraPermissionRequestCode = 100
-    private val targetSize = 320 // Target size 320x320
+    private val targetSize = 320
 
     private lateinit var inputMat: Mat
     private lateinit var resizedMat: Mat
 
     companion object {
-        private const val TAG = "Camera224"
+        private const val TAG = "Camera320"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,10 +52,17 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         buttonStopPreview = findViewById(R.id.buttonStopPreview)
         checkBoxProcessing = findViewById(R.id.checkboxEnableProcessing)
         imageView = findViewById(R.id.imageView)
+        imageViewProcessed = findViewById(R.id.imageViewProcessed)
         openCvCameraView = findViewById(R.id.cameraView)
 
         // Initialize OpenCV
-        isOpenCvInitialized = OpenCVLoader.initLocal()
+        if (!OpenCVLoader.initLocal()) {
+            Log.e(TAG, "OpenCV initialization failed")
+            isOpenCvInitialized = false
+        } else {
+            Log.d(TAG, "OpenCV initialization succeeded")
+            isOpenCvInitialized = true
+        }
 
         // Request camera permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -65,16 +74,13 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
             )
         }
 
-        openCvCameraView.setCameraIndex(0)
+        // Setup camera
+        openCvCameraView.visibility = CameraBridgeViewBase.VISIBLE
         openCvCameraView.setCvCameraViewListener(this)
-
-        // Try to set camera resolution (may not work on all devices)
-        openCvCameraView.setMaxFrameSize(320, 320)
 
         buttonStartPreview.setOnClickListener {
             Log.d(TAG, "Start button clicked")
 
-            // Check camera permission first
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
                 Log.w(TAG, "Camera permission not granted, requesting...")
@@ -164,35 +170,63 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     override fun onCameraFrame(inputFrame: CameraBridgeViewBase.CvCameraViewFrame?): Mat {
         inputFrame!!.rgba().copyTo(inputMat)
 
-        // Always resize to 224x224
+        // Convert RGBA to RGB and resize to 320x320
         val rgbMat = Mat()
         Imgproc.cvtColor(inputMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
-
-        // Resize to 224x224
         Imgproc.resize(rgbMat, resizedMat, Size(targetSize.toDouble(), targetSize.toDouble()))
 
-        // Convert back to RGBA for display
-        val displayMat = Mat()
-        Imgproc.cvtColor(resizedMat, displayMat, Imgproc.COLOR_RGB2RGBA)
+        // Create original display version for top window
+        val originalDisplayMat = Mat()
+        Imgproc.cvtColor(resizedMat, originalDisplayMat, Imgproc.COLOR_RGB2RGBA)
 
-        // Create bitmap for display
-        val bitmapToDisplay = Bitmap.createBitmap(
-            displayMat.cols(),
-            displayMat.rows(),
+        // Create bitmap for top window (always original)
+        val originalBitmap = Bitmap.createBitmap(
+            originalDisplayMat.cols(),
+            originalDisplayMat.rows(),
             Bitmap.Config.ARGB_8888
         )
+        Utils.matToBitmap(originalDisplayMat, originalBitmap)
 
-        Utils.matToBitmap(displayMat, bitmapToDisplay)
+        // Create processed version for bottom window
+        val processedBitmap: Bitmap
+        val statusText: String
+
+        if (checkBoxProcessing.isChecked) {
+            // Create grayscale version
+            val grayscaleMat = Mat()
+            Imgproc.cvtColor(resizedMat, grayscaleMat, Imgproc.COLOR_RGB2GRAY)
+
+            val grayscaleDisplayMat = Mat()
+            Imgproc.cvtColor(grayscaleMat, grayscaleDisplayMat, Imgproc.COLOR_GRAY2RGBA)
+
+            processedBitmap = Bitmap.createBitmap(
+                grayscaleDisplayMat.cols(),
+                grayscaleDisplayMat.rows(),
+                Bitmap.Config.ARGB_8888
+            )
+            Utils.matToBitmap(grayscaleDisplayMat, processedBitmap)
+
+            statusText = "Dual View: Original + Grayscale (320x320)"
+
+            // Clean up
+            grayscaleMat.release()
+            grayscaleDisplayMat.release()
+        } else {
+            // Use same as original
+            processedBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, false)
+            statusText = "Dual View: Original + Original (320x320)"
+        }
 
         // Display on UI thread
         runOnUiThread {
-            imageView.setImageBitmap(bitmapToDisplay)
-            textViewStatus.text = "Camera: 320x320"
+            imageView.setImageBitmap(originalBitmap)
+            imageViewProcessed.setImageBitmap(processedBitmap)
+            textViewStatus.text = statusText
         }
 
         // Clean up
         rgbMat.release()
-        displayMat.release()
+        originalDisplayMat.release()
 
         return inputMat
     }
@@ -222,5 +256,19 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         if (::resizedMat.isInitialized) resizedMat.release()
 
         Log.d(TAG, "Activity destroyed")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::openCvCameraView.isInitialized) {
+            openCvCameraView.disableView()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isOpenCvInitialized && ::openCvCameraView.isInitialized) {
+            openCvCameraView.enableView()
+        }
     }
 }

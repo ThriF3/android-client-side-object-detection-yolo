@@ -8,7 +8,7 @@
     <!-- Top Border -->
     <View
         android:layout_width="match_parent"
-        android:layout_height="17dp"
+        android:layout_height="20dp"
         android:layout_marginBottom="8dp"
         android:background="#002196F3" />
 
@@ -39,36 +39,62 @@
             android:layout_marginStart="8dp"/>
     </LinearLayout>
 
-    <!-- Checkbox to enable 224x224 resize -->
+    <!-- Checkbox to enable grayscale -->
 
-    <!-- OpenCV Camera View (unhidden for debugging) -->
-
-    <!-- Main Image Display -->
+    <!-- Hidden OpenCV Camera View -->
     <CheckBox
         android:id="@+id/checkboxEnableProcessing"
         android:layout_width="wrap_content"
-        android:layout_height="23dp"
+        android:layout_height="25dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="16dp"
-        android:text="Resize to 320x320" />
+        android:text="Enable Grayscale" />
 
     <org.opencv.android.JavaCameraView
         android:id="@+id/cameraView"
+        android:layout_width="1px"
+        android:layout_height="1px"
+        android:visibility="gone" />
+
+    <!-- Top Window - Original Video -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Original Video (320x320)"
         android:layout_gravity="center_horizontal"
-        android:layout_width="351dp"
-        android:layout_height="328dp"
-        android:rotation="90"
-        android:visibility="visible" />
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="match_parent"
-        android:layout_height="395dp"
-        android:layout_marginBottom="16dp"
-        android:layout_weight="1"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_gravity="center_horizontal"
         android:background="#f0f0f0"
-        android:contentDescription="Camera Feed"
-        android:scaleType="centerCrop" />
+        android:contentDescription="Original Camera Feed"
+        android:scaleType="fitXY"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Bottom Window - Grayscale/Same Video -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Processed Video (320x320)"
+        android:layout_gravity="center_horizontal"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <ImageView
+        android:id="@+id/imageViewProcessed"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#f0f0f0"
+        android:contentDescription="Processed Camera Feed"
+        android:scaleType="fitXY"
+        android:layout_marginBottom="16dp" />
 
     <!-- Status Text -->
     <TextView

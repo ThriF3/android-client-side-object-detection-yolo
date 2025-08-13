@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     private var isPreviewActive = false
 
     private val cameraPermissionRequestCode = 100
-    private val targetSize = 600 // Target size 600x600
+    private val targetSize = 320 // Target size 320x320
 
     private lateinit var inputMat: Mat
     private lateinit var resizedMat: Mat
@@ -67,6 +67,9 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 
         openCvCameraView.setCameraIndex(0)
         openCvCameraView.setCvCameraViewListener(this)
+
+        // Try to set camera resolution (may not work on all devices)
+        openCvCameraView.setMaxFrameSize(320, 320)
 
         buttonStartPreview.setOnClickListener {
             Log.d(TAG, "Start button clicked")
@@ -161,49 +164,35 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     override fun onCameraFrame(inputFrame: CameraBridgeViewBase.CvCameraViewFrame?): Mat {
         inputFrame!!.rgba().copyTo(inputMat)
 
-        var matToDisplay = inputMat
+        // Always resize to 224x224
+        val rgbMat = Mat()
+        Imgproc.cvtColor(inputMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
 
-        if (checkBoxProcessing.isChecked) {
-            // Convert RGBA to RGB
-            val rgbMat = Mat()
-            Imgproc.cvtColor(inputMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
+        // Resize to 224x224
+        Imgproc.resize(rgbMat, resizedMat, Size(targetSize.toDouble(), targetSize.toDouble()))
 
-            // Resize to 224x224
-            Imgproc.resize(rgbMat, resizedMat, Size(targetSize.toDouble(), targetSize.toDouble()))
-
-            // Convert back to RGBA for display
-            val displayMat = Mat()
-            Imgproc.cvtColor(resizedMat, displayMat, Imgproc.COLOR_RGB2RGBA)
-
-            matToDisplay = displayMat
-
-            // Clean up temporary matrices
-            rgbMat.release()
-        }
+        // Convert back to RGBA for display
+        val displayMat = Mat()
+        Imgproc.cvtColor(resizedMat, displayMat, Imgproc.COLOR_RGB2RGBA)
 
         // Create bitmap for display
         val bitmapToDisplay = Bitmap.createBitmap(
-            matToDisplay.cols(),
-            matToDisplay.rows(),
+            displayMat.cols(),
+            displayMat.rows(),
             Bitmap.Config.ARGB_8888
         )
 
-        Utils.matToBitmap(matToDisplay, bitmapToDisplay)
+        Utils.matToBitmap(displayMat, bitmapToDisplay)
 
         // Display on UI thread
         runOnUiThread {
             imageView.setImageBitmap(bitmapToDisplay)
-            if (checkBoxProcessing.isChecked) {
-                textViewStatus.text = "Processing: 600x600"
-            } else {
-                textViewStatus.text = "Original: ${matToDisplay.cols()}x${matToDisplay.rows()}"
-            }
+            textViewStatus.text = "Camera: 320x320"
         }
 
-        // Clean up display matrix if it was created for processing
-        if (checkBoxProcessing.isChecked && matToDisplay != inputMat) {
-            matToDisplay.release()
-        }
+        // Clean up
+        rgbMat.release()
+        displayMat.release()
 
         return inputMat
     }

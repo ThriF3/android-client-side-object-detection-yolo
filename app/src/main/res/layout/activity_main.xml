@@ -40,22 +40,26 @@
     </LinearLayout>
 
     <!-- Checkbox to enable 224x224 resize -->
+
+    <!-- OpenCV Camera View (unhidden for debugging) -->
+
+    <!-- Main Image Display -->
     <CheckBox
         android:id="@+id/checkboxEnableProcessing"
         android:layout_width="wrap_content"
         android:layout_height="23dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="16dp"
-        android:text="Resize to 600x600" />
+        android:text="Resize to 320x320" />
 
-    <!-- OpenCV Camera View (unhidden for debugging) -->
     <org.opencv.android.JavaCameraView
         android:id="@+id/cameraView"
-        android:layout_width="match_parent"
+        android:layout_gravity="center_horizontal"
+        android:layout_width="351dp"
         android:layout_height="328dp"
+        android:rotation="90"
         android:visibility="visible" />
 
-    <!-- Main Image Display -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"

@@ -5,66 +5,83 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Top Border -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="17dp"
+        android:layout_marginBottom="8dp"
+        android:background="#002196F3" />
+
+    <!-- Control Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_marginTop="16dp">
+        android:layout_marginBottom="16dp">
 
-        <!-- Start Preview Button -->
+        <!-- Start Camera Button -->
         <Button
             android:id="@+id/buttonStartPreview"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Start"
+            android:text="Start Camera"
             android:layout_marginEnd="8dp" />
 
-        <!-- Stop Preview Button -->
+        <!-- Stop Camera Button -->
         <Button
             android:id="@+id/buttonStopPreview"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Stop"
+            android:text="Stop Camera"
             android:layout_marginStart="8dp"/>
     </LinearLayout>
 
-    <!-- Checkbox to enable processing -->
+    <!-- Checkbox to enable 224x224 resize -->
     <CheckBox
         android:id="@+id/checkboxEnableProcessing"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enable processing"
+        android:layout_height="23dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginBottom="16dp"
+        android:text="Resize to 600x600" />
 
+    <!-- OpenCV Camera View (unhidden for debugging) -->
     <org.opencv.android.JavaCameraView
         android:id="@+id/cameraView"
-        android:layout_width="1px"
-        android:layout_height="1px"
-        android:layout_weight="0"
+        android:layout_width="match_parent"
+        android:layout_height="328dp"
         android:visibility="visible" />
 
-    <!-- ImageView for displaying images -->
+    <!-- Main Image Display -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="395dp"
+        android:layout_marginBottom="16dp"
         android:layout_weight="1"
-        android:contentDescription="Image View"
-        android:scaleType="centerCrop"
-        android:layout_margin="16dp" />
+        android:background="#f0f0f0"
+        android:contentDescription="Camera Feed"
+        android:scaleType="centerCrop" />
 
-    <!-- TextViewStatus -->
+    <!-- Status Text -->
     <TextView
         android:id="@+id/textViewStatus"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text=""
-        android:layout_gravity="center_horizontal"
-        android:layout_margin="16dp"
-        android:textSize="64px"/>
+        android:padding="8dp"
+        android:text="OpenCV Camera Ready"
+        android:textAlignment="center"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- Bottom Border -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="19dp"
+        android:layout_marginTop="8dp"
+        android:background="#002196F3" />
 
 </LinearLayout>

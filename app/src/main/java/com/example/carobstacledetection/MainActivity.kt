@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     private var isPreviewActive = false
 
     private val cameraPermissionRequestCode = 100
-    private val targetSize = 224 // Target size 224x224
+    private val targetSize = 600 // Target size 600x600
 
     private lateinit var inputMat: Mat
     private lateinit var resizedMat: Mat
@@ -194,7 +194,7 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         runOnUiThread {
             imageView.setImageBitmap(bitmapToDisplay)
             if (checkBoxProcessing.isChecked) {
-                textViewStatus.text = "Processing: 224x224"
+                textViewStatus.text = "Processing: 600x600"
             } else {
                 textViewStatus.text = "Original: ${matToDisplay.cols()}x${matToDisplay.rows()}"
             }

@@ -17,7 +17,9 @@ import org.opencv.android.CameraBridgeViewBase
 import org.opencv.android.JavaCameraView
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
-import org.opencv.core.*
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 
 class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListener2 {
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 
     private val cameraPermissionRequestCode = 100
     private val targetSize = 320
+    private var detector: YoloV5Onnx? = null
 
     private lateinit var inputMat: Mat
     private lateinit var resizedMat: Mat
@@ -97,6 +100,11 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
                 openCvCameraView.setCameraPermissionGranted()
                 openCvCameraView.enableView()
                 Log.d(TAG, "Camera enableView() called")
+
+                detector = YoloV5Onnx(this@MainActivity,
+                    "yolov5n.onnx", "coco.names",
+                    inputSize = 640, confThresh = 0.35f, iouThresh = 0.45f)
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting camera: ${e.message}")
                 textViewStatus.text = "Error: ${e.message}"
@@ -178,6 +186,11 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         // Create original display version for top window
         val originalDisplayMat = Mat()
         Imgproc.cvtColor(resizedMat, originalDisplayMat, Imgproc.COLOR_RGB2RGBA)
+
+        val rgb = Mat()
+        Imgproc.cvtColor(originalDisplayMat, rgb, Imgproc.COLOR_RGBA2RGB)
+
+        detector?.detectAndRender(rgb, originalDisplayMat)
 
         // Create bitmap for top window (always original)
         val originalBitmap = Bitmap.createBitmap(

@@ -51,5 +51,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     // OpenCV with DNN module support
+    // your OpenCV module
+//    implementation(project(":openCV")) // your OpenCV module
     implementation("org.opencv:opencv:4.10.0")
+
 }

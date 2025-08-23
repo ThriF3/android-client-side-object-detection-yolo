@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Car Obstacle Detection Mobile"
 include(":app")
- 
+include(":openCV")

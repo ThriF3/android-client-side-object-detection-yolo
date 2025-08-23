@@ -19,6 +19,8 @@ import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
 import org.opencv.core.CvType
 import org.opencv.core.Mat
+import org.opencv.core.Point
+import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 
@@ -37,6 +39,7 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
     private val cameraPermissionRequestCode = 100
     private val targetSize = 320
     private var detector: YoloV5Onnx? = null
+    private var detectorTFLite: YoloV5TFLite? = null
 
     private lateinit var inputMat: Mat
     private lateinit var resizedMat: Mat
@@ -101,13 +104,34 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
                 openCvCameraView.enableView()
                 Log.d(TAG, "Camera enableView() called")
 
-                detector = YoloV5Onnx(this@MainActivity,
-                    "yolov5n.onnx", "coco.names",
-                    inputSize = 640, confThresh = 0.35f, iouThresh = 0.45f)
+//                detector = YoloV5Onnx(this@MainActivity,
+//                    "best.onnx", "coco.names",
+//                    inputSize = 640, confThresh = 0.35f, iouThresh = 0.45f)
+
+//                detector = YoloV5Onnx(this@MainActivity,
+//                    "yolov5n-320.onnx", "coco.names",
+//                    inputSize = 320, confThresh = 0.1f, iouThresh = 0.3f)  // Match your targetSize
+
+//                detector = YoloV5Onnx(this@MainActivity,
+//                    "yolov5s.onnx", "coco.names",
+//                    inputSize = 320,  // Match your export size
+//                    confThresh = 0.1f,  // Lower threshold for testing
+//                    iouThresh = 0.3f)   // Lower IoU threshold
+
+                detectorTFLite = YoloV5TFLite(this@MainActivity,
+                    "suBest2_float16.tflite", "custom.names",
+                    inputSize = 320,  // Match your model's input size
+                    confThresh = 0.1f,  // Higher threshold for TFLite
+                    iouThresh = 0.45f)
+
+                Log.d(TAG, "TFLite detector initialized")
+
+                Log.d(TAG, "Detector initialized with low thresholds for testing")
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error starting camera: ${e.message}")
-                textViewStatus.text = "Error: ${e.message}"
+                Log.e(TAG, "Error initializing detector: ${e.message}")
+                detector = null
+                textViewStatus.text = "Model loading failed: ${e.message}"
             }
 
             updateControls()
@@ -190,7 +214,18 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
         val rgb = Mat()
         Imgproc.cvtColor(originalDisplayMat, rgb, Imgproc.COLOR_RGBA2RGB)
 
-        detector?.detectAndRender(rgb, originalDisplayMat)
+        // Test if drawing works at all
+//        Imgproc.rectangle(originalDisplayMat,
+//            Point(10.0, 10.0), Point(100.0, 50.0),
+//            Scalar(255.0, 0.0, 0.0, 255.0), 3)
+//        Imgproc.putText(originalDisplayMat, "TEST DRAW",
+//            Point(10.0, 80.0), Imgproc.FONT_HERSHEY_SIMPLEX,
+//            1.0, Scalar(255.0, 0.0, 0.0, 255.0), 2)
+//
+//        Log.d(TAG, "Added test rectangle and text")
+
+//        detector?.detectAndRender(rgb, originalDisplayMat)
+        detectorTFLite?.detectAndRender(rgb, originalDisplayMat)
 
         // Create bitmap for top window (always original)
         val originalBitmap = Bitmap.createBitmap(
@@ -226,14 +261,14 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
             grayscaleDisplayMat.release()
         } else {
             // Use same as original
-            processedBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, false)
+//            processedBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, false)
             statusText = "Dual View: Original + Original (320x320)"
         }
 
         // Display on UI thread
         runOnUiThread {
             imageView.setImageBitmap(originalBitmap)
-            imageViewProcessed.setImageBitmap(processedBitmap)
+//            imageViewProcessed.setImageBitmap(processedBitmap)
             textViewStatus.text = statusText
         }
 
@@ -267,6 +302,8 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 
         if (::inputMat.isInitialized) inputMat.release()
         if (::resizedMat.isInitialized) resizedMat.release()
+
+        detectorTFLite?.close()
 
         Log.d(TAG, "Activity destroyed")
     }

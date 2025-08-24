@@ -187,35 +187,20 @@ class YoloV5TFLite(
 
     private fun convertMatToBuffer(mat: Mat, buffer: ByteBuffer) {
         buffer.rewind()
-
         val data = ByteArray((mat.total() * mat.channels()).toInt())
         mat.get(0, 0, data)
 
-        // Convert BGR to RGB and normalize
-        // Float16 models may be more sensitive to input range
         for (i in 0 until mat.height()) {
             for (j in 0 until mat.width()) {
                 val idx = (i * mat.width() + j).toInt() * 3
-
-                // OpenCV uses BGR, TFLite expects RGB
                 val b = data[idx].toInt() and 0xFF
                 val g = data[idx + 1].toInt() and 0xFF
                 val r = data[idx + 2].toInt() and 0xFF
 
-                if (isQuantized) {
-                    buffer.put(r.toByte())
-                    buffer.put(g.toByte())
-                    buffer.put(b.toByte())
-                } else {
-                    // For Float16 models, ensure exact normalization
-                    val normalizedR = r / 255.0f
-                    val normalizedG = g / 255.0f
-                    val normalizedB = b / 255.0f
-
-                    buffer.putFloat(normalizedR)
-                    buffer.putFloat(normalizedG)
-                    buffer.putFloat(normalizedB)
-                }
+                // NO NORMALIZATION - raw pixel values
+                buffer.putFloat(r.toFloat())
+                buffer.putFloat(g.toFloat())
+                buffer.putFloat(b.toFloat())
             }
         }
 
@@ -288,6 +273,8 @@ class YoloV5TFLite(
 
         var detectionsAboveThreshold = 0
 
+        // Replace the parseOutput filtering section with this balanced approach:
+
         for (i in 0 until numPredictions) {
             val getValue: (Int) -> Float = { c ->
                 val index = if (isTransposed) {
@@ -309,9 +296,8 @@ class YoloV5TFLite(
             val h = getValue(3)
             val objectness = getValue(4)
 
-            // Float16 models may have different objectness ranges
-            // Be more strict with objectness filtering
-            if (objectness <= 0.05f) continue  // Higher threshold for Float16
+            // Moderate objectness filtering
+            if (objectness <= 0.01f) continue  // Much lower threshold
 
             // Handle different output formats
             var bestClass = -1
@@ -322,12 +308,10 @@ class YoloV5TFLite(
             for (c in 5 until outputsPerPrediction) {
                 val classScore = getValue(c)
 
-                // For Float16 YOLOv5su, class scores may not need objectness multiplication
                 val finalScore = if (outputsPerPrediction == 8) {
-                    // YOLOv5su format - class scores are already post-processed
+                    // YOLOv5su format
                     classScore
                 } else {
-                    // Traditional format
                     classScore * objectness
                 }
 
@@ -337,26 +321,27 @@ class YoloV5TFLite(
                 }
             }
 
-            // Additional Float16-specific filtering
+            // Relaxed filtering - only block obviously bad detections
             val boxArea = w * h
 
-            // Filter unrealistic detections common in Float16 models
-            if (boxArea < 0.002f || boxArea > 0.9f) continue  // Stricter area constraints
-            if (w < 0.02f || h < 0.02f) continue              // Too small
-            if (w > 0.95f || h > 0.95f) continue              // Too large
+            // Only filter extreme cases
+            if (boxArea < 0.0001f || boxArea > 1.5f) continue  // Much more permissive
+            if (w < 0.005f || h < 0.005f) continue             // Allow smaller objects
+            if (w > 1.2f || h > 1.2f) continue                 // Allow larger objects
 
-            // Filter detections at exact edges (common Float16 artifacts)
-            if (cx <= 0.02f || cx >= 0.98f || cy <= 0.02f || cy >= 0.98f) continue
+            // More lenient edge filtering - only block if completely outside
+            if (cx < -0.1f || cx > 1.1f || cy < -0.1f || cy > 1.1f) continue
 
-            // Filter very thin or very wide boxes (often false positives)
-            val aspectRatio = w / h
-            if (aspectRatio < 0.1f || aspectRatio > 10.0f) continue
+            // More permissive aspect ratio
+            if (h > 0) {
+                val aspectRatio = w / h
+                if (aspectRatio < 0.02f || aspectRatio > 50.0f) continue  // Much more lenient
+            }
 
             if (bestScore >= confThresh && bestClass >= 0) {
                 detectionsAboveThreshold++
 
                 // YOLOv5su outputs normalized coordinates (0.0-1.0)
-                // Convert to pixel coordinates first, then map to original image space
                 val pixelCx = cx * inputSize
                 val pixelCy = cy * inputSize
                 val pixelW = w * inputSize
@@ -376,7 +361,7 @@ class YoloV5TFLite(
                     val className = if (bestClass < labels.size) labels[bestClass] else "cls$bestClass"
                     Log.d(TAG, "Detection $i: $className, conf=$bestScore")
                     Log.d(TAG, "  Raw coords: cx=$cx, cy=$cy, w=$w, h=$h (normalized)")
-                    Log.d(TAG, "  Pixel coords: cx=${cx*inputSize}, cy=${cy*inputSize}, w=${w*inputSize}, h=${h*inputSize}")
+                    Log.d(TAG, "  Box area: $boxArea, Aspect ratio: ${if (h > 0) w/h else "inf"}")
                     Log.d(TAG, "  Final box: ($x1,$y1,${x2-x1},${y2-y1}) (original image space)")
                 }
             }

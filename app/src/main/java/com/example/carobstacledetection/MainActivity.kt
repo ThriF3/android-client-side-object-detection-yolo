@@ -119,10 +119,10 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 //                    iouThresh = 0.3f)   // Lower IoU threshold
 
                 detectorTFLite = YoloV5TFLite(this@MainActivity,
-                    "suBest2_float16.tflite", "custom.names",
+                    "suBest3_float16.tflite", "custom.names",
                     inputSize = 320,  // Match your model's input size
-                    confThresh = 0.1f,  // Higher threshold for TFLite
-                    iouThresh = 0.45f)
+                    confThresh = 0.5f,  // Higher threshold for TFLite
+                    iouThresh = 0.1f)
 
                 Log.d(TAG, "TFLite detector initialized")
 
